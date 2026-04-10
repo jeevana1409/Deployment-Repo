@@ -9,6 +9,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "jeevan204/myapp"
         CONTAINER_NAME = "myapp-dev"
+        DEV_SERVER = "15.135.214.29"
         PORT = "8081"
     }
 
