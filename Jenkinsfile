@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE = "jeevana1409/myapp"
+        DOCKER_IMAGE = "jeevan204/myapp"
         CONTAINER_NAME = "app"
         DEV_SERVER = "15.135.214.29"
     }
