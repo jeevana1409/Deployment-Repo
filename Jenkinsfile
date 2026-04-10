@@ -2,75 +2,54 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'APP_VERSION', defaultValue: 'latest', description: 'Docker image version')
-        string(name: 'BRANCH_NAME', defaultValue: 'dev', description: 'Branch to deploy')
+        string(name: 'APP_VERSION', description: 'Docker image version to deploy')
     }
 
     environment {
-        DOCKER_IMAGE = "jeevan204/myapp"
-        CONTAINER_NAME = "myapp-dev"
+        DOCKER_IMAGE = "jeevana1409/myapp"
+        CONTAINER_NAME = "app"
         DEV_SERVER = "15.135.214.29"
-        PORT = "8081"
     }
 
     stages {
 
-        stage('Checkout Code') {
+        stage('Validate Input') {
             steps {
-                git branch: "${BRANCH_NAME}", url: 'https://github.com/jeevana1409/Deployment-Repo.git'
-            }
-        }
-
-        stage('Verify Inputs') {
-            steps {
-                echo "Deploying Version: ${APP_VERSION}"
-                echo "Branch: ${BRANCH_NAME}"
-            }
-        }
-
-        stage('Docker Login') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-cred',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    '''
+                script {
+                    if (!params.APP_VERSION) {
+                        error "APP_VERSION is required!"
+                    }
+                    echo "Deploying Version: ${params.APP_VERSION}"
                 }
             }
         }
 
-        stage('Pull Docker Image') {
+        stage('Deploy to Dev Server') {
             steps {
-                sh "docker pull ${DOCKER_IMAGE}:${APP_VERSION}"
-            }
-        }
+                script {
 
-        stage('Stop Old Container') {
-            steps {
-                sh '''
-                docker stop ${CONTAINER_NAME} || true
-                docker rm ${CONTAINER_NAME} || true
-                '''
-            }
-        }
+                    sshagent(credentials: ['server-ssh']) {
 
-        stage('Run New Container') {
-            steps {
-                sh """
-                docker run -d \
-                --name ${CONTAINER_NAME} \
-                -p ${PORT}:8080 \
-                ${DOCKER_IMAGE}:${APP_VERSION}
-                """
-            }
-        }
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ec2-user@${DEV_SERVER} "
 
-        stage('Verify Deployment') {
-            steps {
-                sh "docker ps | grep ${CONTAINER_NAME}"
+                        echo 'Pulling latest image...'
+                        docker pull ${DOCKER_IMAGE}:${params.APP_VERSION}
+
+                        echo 'Stopping old container...'
+                        docker stop ${CONTAINER_NAME} || true
+
+                        echo 'Removing old container...'
+                        docker rm ${CONTAINER_NAME} || true
+
+                        echo 'Starting new container...'
+                        docker run -d -p 8080:8080 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}:${params.APP_VERSION}
+
+                        echo 'Deployment completed successfully'
+                        "
+                        """
+                    }
+                }
             }
         }
     }
@@ -79,6 +58,7 @@ pipeline {
         success {
             echo "✅ Dev Deployment Successful"
         }
+
         failure {
             echo "❌ Dev Deployment Failed"
         }
