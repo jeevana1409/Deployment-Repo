@@ -8,7 +8,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "jeevan204/myapp"
         CONTAINER_NAME = "app"
-        DEV_SERVER = "15.135.214.29"
+        DEV_SERVER = "3.107.113.53"
     }
 
     stages {
